@@ -282,12 +282,12 @@ class CVAE(BaseVAE):
         h = self.encoder(x)
         h = h.permute(0,3,2,1)
         temp = list(h.shape)
-        h = torch.reshape(h,(temp[0],52*52*1))
+        h = torch.reshape(h,(temp[0],temp[1]*temp[2]*temp[3]))
 
         mu, logvar = self.fc_encode(h)
         z = self.fc_reparameterize(mu, logvar)
         z = self.fc_decode(z)
-        z = z.view(-1, 52, 52, 1)
+        z = z.view(-1, temp[1], temp[2],temp[3])
         z = z.permute(0,3,2,1)   
  
         return self.decoder(z), mu, logvar
