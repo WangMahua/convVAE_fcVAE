@@ -16,7 +16,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from PIL import Image
 
-from dataset import mimii_dataset
+from dataset_image import mimii_dataset
 # from models.lstm import gaussian_lstm, lstm
 # from models.vgg_64 import vgg_decoder, vgg_encoder
 from models.vae import ConvVAE,CVAE
@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--data_type', default='valve')
     parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
-    parser.add_argument('--batch_size', default=3, type=int, help='batch size')
+    parser.add_argument('--batch_size', default=128, type=int, help='batch size')
     parser.add_argument('--log_dir', default='./logs/lp', help='base directory to save logs')
     parser.add_argument('--model_dir', default='', help='base directory to save logs')
     parser.add_argument('--data_root', default='./data', help='root directory for data')

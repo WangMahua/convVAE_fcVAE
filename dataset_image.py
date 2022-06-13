@@ -5,18 +5,26 @@ import csv
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
+import cv2
 
 import librosa
 import librosa.display
+import matplotlib
+matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 
-default_transform = transforms.Compose([transforms.ToTensor()])
+
+
+default_transform = transforms.Compose([
+    # transforms.Resize([64, 64]),
+    transforms.ToTensor()])
 
 class mimii_dataset(Dataset):
-    def __init__(self,args,mode='train', transform=default_transform):
+    def __init__(self, args, mode='train', transform=default_transform):
         assert mode == 'train' or mode == 'test' or mode == 'validate'
-        self.root_dir = args.data_root # './data'
-        self.data_type = args.data_type # 'valve'
+
+        self.root_dir = args.data_root  #'./data'
+        self.data_type = args.data_type  #'valve'
 
         if mode=='train':
             self.data_dir = '%s/train/%s' % (self.root_dir, self.data_type)
@@ -38,6 +46,7 @@ class mimii_dataset(Dataset):
         # print(self.dirs)
 
         self.transformations = transform
+        # self.fig = plt.figure()
 
 
     def __len__(self):
@@ -45,34 +54,29 @@ class mimii_dataset(Dataset):
 
     def __getitem__(self, index):
         # print(self.dirs[index])
-        y , sr = librosa.load(self.dirs[index], sr=16000)
-        M1 = librosa.feature.melspectrogram(y=y, n_fft=512, n_mels=64, sr=sr)
-        M_db1 = librosa.power_to_db(M1, ref=np.max)
-        image = torch.from_numpy(M_db1)
-        image = image[np.newaxis, :] 
-        # print(image.shape)
-        # print(M_db1.shape)
 
-        # # Show image
-        fig = plt.figure()
-        plt.gca().xaxis.set_major_locator(plt.NullLocator()) 
-        plt.gca().yaxis.set_major_locator(plt.NullLocator()) 
-        plt.subplots_adjust(top=1,bottom=0,left=0,right=1,hspace=0,wspace=0) 
-        plt.axis('off')
-        librosa.display.specshow(M_db1, x_axis='time', y_axis='mel')
+        # Get RGB image array
+        # fig.canvas.draw()
+        # img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+        # img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        # w, h = img.shape[0], img.shape[1]
+        # img = Image.fromarray(img, mode='RGB')
+        # # img = img.resize((int(h/2), int(w/2)), Image.ANTIALIAS)
+        # img = img.resize((64, 64), Image.ANTIALIAS)
+        # img = self.transformations(img)
+        # plt.cla()
+        # plt.close("all")
+        # plt.clf()
 
-        # # Get RGB image array
-        fig.canvas.draw()
-        img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        w, h = img.shape[0], img.shape[1]
+        fname = self.dirs[index]
+        # img = Image.open(fname)  # read an PIL image
+        # print(img.size)
+        img = cv2.imread(fname)
+        b,g,r = cv2.split(img)
+        img = cv2.merge([r,g,b])
         img = Image.fromarray(img, mode='RGB')
-        # img = img.resize((int(h/2), int(w/2)), Image.ANTIALIAS)
         img = img.resize((64, 64), Image.ANTIALIAS)
         img = self.transformations(img)
-
-        plt.cla()
-        plt.close("all")
-        # M_db1_tensor = self.transformations(M_db1)
+        # print(img.shape)
 
         return img
