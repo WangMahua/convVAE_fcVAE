@@ -12,6 +12,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from torchvision.utils import save_image
 
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -27,18 +28,18 @@ torch.backends.cudnn.benchmark = True
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_type', default='valve')
-    parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
+    parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
     parser.add_argument('--batch_size', default=128, type=int, help='batch size')
     parser.add_argument('--log_dir', default='./logs', help='base directory to save logs')
     parser.add_argument('--model_dir', default='', help='base directory to save logs')
     parser.add_argument('--data_root', default='./data_image', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
-    parser.add_argument('--niter', type=int, default=50, help='number of epochs to train for')
-    parser.add_argument('--epoch_size', type=int, default=10, help='epoch size')
+    parser.add_argument('--niter', type=int, default=300, help='number of epochs to train for')
+    parser.add_argument('--epoch_size', type=int, default=100, help='epoch size')
     parser.add_argument('--seed', default=1, type=int, help='manual seed')
     parser.add_argument('--z_dim', type=int, default=64, help='dimensionality of z_t')
-    parser.add_argument('--beta', type=float, default=0.0001, help='weighting on KL to prior')
+    parser.add_argument('--beta', type=float, default=0.001, help='weighting on KL to prior')
     parser.add_argument('--cuda', default=True, action='store_true') 
 
     args = parser.parse_args()
@@ -151,7 +152,7 @@ def main():
         train_loss = 0.0
 
         model.train()
-        for i, images in enumerate(train_loader):
+        for epoch_ in range(args.epoch_size):
             try:
                 seq = next(train_iterator)
             except StopIteration:
@@ -169,14 +170,16 @@ def main():
                 mu,
                 logvar,
                 use_bce=True)
+            a = list(seq.shape)
+            loss = loss/a[0]
             loss.backward()
             epoch_loss += loss.item()
             optimizer.step()
         
 
         # Save image
-        recon_seq, _, _ = model(seq)
-        compare_seq = torch.cat([seq, recon_seq])
+        # recon_seq, _, _ = model(seq)
+        compare_seq = torch.cat([seq, recon_batch])
         save_image(compare_seq.data.cpu(), args.log_dir + f'/recon_image_{epoch}.png')
 
         progress.update(1)

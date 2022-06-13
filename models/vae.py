@@ -279,25 +279,15 @@ class CVAE(BaseVAE):
         return self.bottleneck(self.encoder(x))[0]
 
     def forward(self, x):
-        print("==")
         h = self.encoder(x)
-        print(h.shape)
         h = h.permute(0,3,2,1)
-        print(h.shape)
         temp = list(h.shape)
         h = torch.reshape(h,(temp[0],52*52*1))
-        print(h.shape)
 
         mu, logvar = self.fc_encode(h)
         z = self.fc_reparameterize(mu, logvar)
-        print(mu.shape)
-        print(logvar.shape)
         z = self.fc_decode(z)
-        print(z.shape) 
         z = z.view(-1, 52, 52, 1)
-
-        print(z.shape) 
         z = z.permute(0,3,2,1)   
-        print(z.shape) 
-        # z = self.fc3(z)
+ 
         return self.decoder(z), mu, logvar
