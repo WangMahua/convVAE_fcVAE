@@ -36,11 +36,12 @@ def parse_args():
     parser.add_argument('--data_root', default='./data_image', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
     parser.add_argument('--niter', type=int, default=300, help='number of epochs to train for')
-    parser.add_argument('--epoch_size', type=int, default=10, help='epoch size')
+    parser.add_argument('--epoch_size', type=int, default=30, help='epoch size')
     parser.add_argument('--seed', default=1, type=int, help='manual seed')
     parser.add_argument('--z_dim', type=int, default=64, help='dimensionality of z_t')
     parser.add_argument('--beta', type=float, default=0.001, help='weighting on KL to prior')
     parser.add_argument('--cuda', default=True, action='store_true') 
+    parser.add_argument('--id_num', default=4, type=int, help='id num') 
 
     args = parser.parse_args()
     return args
@@ -100,8 +101,9 @@ def main():
         args.log_dir = '%s/continued' % args.log_dir
         start_epoch = saved_model['last_epoch']
     else:
-        nowTime = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
+        nowTime = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-')
         name = '{}'.format(nowTime)
+        name = name + str(args.data_type) + '_id_0' + str(args.id_num)
         args.log_dir = '%s/%s' % (args.log_dir, name)
         niter = args.niter
         start_epoch = 0

@@ -245,11 +245,12 @@ class CVAE(BaseVAE):
         self.fc_channels = 1
         self.fc_width = 52
         self.fc_height = 52
-        self.fc1 = nn.Linear(self.fc_channels * self.fc_width * self.fc_height, 400)
-        self.fc21 = nn.Linear(400, self.z_dim)
-        self.fc22 = nn.Linear(400, self.z_dim)
-        self._fc3 = nn.Linear(self.z_dim, 400)
-        self._fc4 = nn.Linear(400, self.fc_channels * self.fc_width * self.fc_height)
+        self.fc1 = nn.Linear(self.fc_channels * self.fc_width * self.fc_height, 32)
+        self.fc21 = nn.Linear(32, 16)
+        self.fc22 = nn.Linear(32, 16)
+        self._fc3 = nn.Linear(16, 32)
+        self._fc4 = nn.Linear(32, 64)
+        self._fc5 = nn.Linear(64, self.fc_channels * self.fc_width * self.fc_height)
 
     def fc_encode(self, x):
         h1 = F.relu(self.fc1(x))
@@ -257,7 +258,109 @@ class CVAE(BaseVAE):
 
     def fc_decode(self, z):
         h3 = F.relu(self._fc3(z))
-        return torch.sigmoid(self._fc4(h3))
+        h4 = F.relu(self._fc4(h3))
+        return torch.sigmoid(self._fc5(h4))
+
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5*logvar)
+        eps = torch.randn_like(std)
+        z = mu + std * eps
+        return z
+    def fc_reparameterize(self, mu, logvar):
+        std = torch.exp(0.5*logvar)
+        eps = torch.randn_like(std)
+        
+        return mu + eps*std
+
+    def bottleneck(self, h):
+        mu, logvar = self.fc1(h), self.fc2(h)
+        z = self.reparameterize(mu, logvar)
+        return z, mu, logvar
+
+    def representation(self, x):
+        return self.bottleneck(self.encoder(x))[0]
+
+    def forward(self, x):
+        h = self.encoder(x)
+        h = h.permute(0,3,2,1)
+        temp = list(h.shape)
+        h = torch.reshape(h,(temp[0],temp[1]*temp[2]*temp[3]))
+
+        mu, logvar = self.fc_encode(h)
+        z = self.fc_reparameterize(mu, logvar)
+        z = self.fc_decode(z)
+        z = z.view(-1, temp[1], temp[2],temp[3])
+        z = z.permute(0,3,2,1)   
+ 
+        return self.decoder(z), mu, logvar
+
+
+class C_VAE(BaseVAE):
+    """
+    Convolutional Variational Autoencoder
+    """
+    def __init__(self, batch_size ,channels=3, width=64, height=64, z_dim=128):
+        super(CVAE, self).__init__(channels, width, height, z_dim)
+
+        self.encoder_conv = nn.Sequential(
+            nn.Conv2d(self.channels, 32, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 1, kernel_size=4, stride=1),
+            nn.ReLU())
+        self.b = batch_size
+        # self.encoder = nn.Sequential(
+        #     self.encoder_conv,
+        #     Flatten())
+
+        self.encoder = nn.Sequential(
+            self.encoder_conv)
+
+
+
+        dummy_input = torch.ones([1, self.channels, self.height, self.width])
+        conv_size = self.encoder_conv(dummy_input).size()
+        h_dim = self.encoder(dummy_input).size(1)
+
+        self.fc1 = nn.Linear(h_dim, self.z_dim)
+        self.fc2 = nn.Linear(h_dim, self.z_dim)
+        self.fc3 = nn.Linear(self.z_dim, h_dim)
+
+        self.decoder_conv = nn.Sequential(
+            nn.ConvTranspose2d(1, 32, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 32, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 32, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, self.channels, kernel_size=4, stride=1),
+            nn.Sigmoid())
+
+        self.decoder = nn.Sequential(
+            UnFlatten(conv_size[1], conv_size[2], conv_size[3]),
+            self.decoder_conv)
+
+        self.fc_channels = 1
+        self.fc_width = 52
+        self.fc_height = 52
+        self.fc1 = nn.Linear(self.fc_channels * self.fc_width * self.fc_height, 32)
+        self.fc21 = nn.Linear(32, 16)
+        self.fc22 = nn.Linear(32, 16)
+        self._fc3 = nn.Linear(16, 32)
+        self._fc4 = nn.Linear(32, 64)
+        self._fc5 = nn.Linear(64, self.fc_channels * self.fc_width * self.fc_height)
+
+    def fc_encode(self, x):
+        h1 = F.relu(self.fc1(x))
+        return self.fc21(h1), self.fc22(h1)
+
+    def fc_decode(self, z):
+        h3 = F.relu(self._fc3(z))
+        h4 = F.relu(self._fc4(h3))
+        return torch.sigmoid(self._fc5(h4))
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5*logvar)

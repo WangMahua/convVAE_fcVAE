@@ -31,6 +31,8 @@ class mimii_dataset(Dataset):
         self.dirs = []
 
         for d1 in os.listdir(self.data_dir):
+            if not d1 == 'id_00':
+                continue
             for d2 in os.listdir('%s/%s' % (self.data_dir, d1)):
                 for d3 in os.listdir('%s/%s/%s' % (self.data_dir, d1, d2)):
                     self.dirs.append('%s/%s/%s/%s' % (self.data_dir, d1, d2, d3))
